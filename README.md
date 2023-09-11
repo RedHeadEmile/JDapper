@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/RedHeadEmile/JDapper.svg)](https://jitpack.io/#RedHeadEmile/JDapper)
+
 # JDapperAPI
 
 This project is a Dapper-like library in Java to map your query result with objects just like Dapper in C#.
