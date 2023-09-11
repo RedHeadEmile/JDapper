@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.RowMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class JDapperExample {
     public static void main(String[] args) {
@@ -35,7 +36,9 @@ public class JDapperExample {
                 "uuid", "PlayerMessageId"
         );
 
+        long start = System.currentTimeMillis();
         jdbcTemplate.query("SELECT player.*, playermessage.* FROM player LEFT JOIN playermessage ON player.uuid = playermessage.Player_PlayerId", playerMapper);
+        System.out.println("Query + Mapping took " + (System.currentTimeMillis() - start) + "ms");
 
         System.out.println(players);
     }

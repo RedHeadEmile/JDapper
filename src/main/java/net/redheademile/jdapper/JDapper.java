@@ -3,10 +3,7 @@ package net.redheademile.jdapper;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -16,6 +13,16 @@ import java.util.Map;
 import java.util.function.Function;
 
 public abstract class JDapper<T> implements RowMapper<T> {
+    public static boolean CACHE_FIELDS_AND_METHOD = true;
+    private static final Map<Class<?>, JDapperCache<?>> CACHE = new HashMap<>();
+
+    private static <T> JDapperCache<T> getCache(Class<T> tClass) {
+        if (!CACHE_FIELDS_AND_METHOD)
+            return new JDapperCache<>(tClass);
+
+        return (JDapperCache<T>) CACHE.computeIfAbsent(tClass, a -> new JDapperCache<>(tClass));
+    }
+
     private static <U> U readValue(Type type, Function<Class<? extends Annotation>, Annotation> getAnnotation, ResultSet rs, int columnIndex) throws SQLException {
         Object readObject = null;
 
@@ -82,37 +89,20 @@ public abstract class JDapper<T> implements RowMapper<T> {
 
     protected <U> U createFilledObject(Class<U> objClass, ResultSet rs, int columnIndexStart, int columnIndexEnd) {
         try {
-            U u = objClass.getConstructor().newInstance();
-            Map<String, Method> uMethod = new HashMap<>();
-            Map<String, Field> uFields = new HashMap<>();
-
-            for (Method m : objClass.getDeclaredMethods()) {
-                JDapperColumnName columnName = m.getAnnotation(JDapperColumnName.class);
-                if (columnName == null)
-                    continue;
-
-                uMethod.put(columnName.value().toLowerCase(), m);
-            }
-
-            for (Field f : objClass.getDeclaredFields()) {
-                JDapperColumnName columnName = f.getAnnotation(JDapperColumnName.class);
-                if (columnName != null)
-                    uFields.put(columnName.value().toLowerCase(), f);
-                else
-                    uFields.put(f.getName().toLowerCase(), f);
-            }
+            JDapperCache<U> cache = getCache(objClass);
+            U u = cache.constructor.newInstance();
 
             for (int i = columnIndexStart; i <= columnIndexEnd; i++) {
                 String columnName = rs.getMetaData().getColumnLabel(i).toLowerCase();
 
-                Method correspondingMethod = uMethod.get(columnName);
+                Method correspondingMethod = cache.methodMap.get(columnName);
                 if (correspondingMethod != null) {
                     correspondingMethod.setAccessible(true);
                     correspondingMethod.invoke(u, new Object[] { readValue(correspondingMethod.getParameters()[0].getType(), correspondingMethod::getAnnotation, rs, i) });
                     continue;
                 }
 
-                Field correspondingField = uFields.get(columnName);
+                Field correspondingField = cache.fieldMap.get(columnName);
                 if (correspondingField == null)
                     continue;
 
@@ -122,7 +112,7 @@ public abstract class JDapper<T> implements RowMapper<T> {
 
             return u;
         }
-        catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException |
+        catch (SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException |
                InvocationTargetException | SQLException e) {
             throw new JDapperException(e);
         }
@@ -190,5 +180,36 @@ public abstract class JDapper<T> implements RowMapper<T> {
             JDapperSevenfold.JDapperMergeFunction<A, B, C, D, E, F, G, Z> mergeFunction,
             String firstAColumn, String firstBColumn, String firstCColumn, String firstDColumn, String firstEColumn, String firstFColumn, String firstGColumn) {
         return new JDapperSevenfold<A, B, C, D, E, F, G, Z>(aClass, bClass, cClass, dClass, eClass, fClass, gClass, mergeFunction, firstAColumn, firstBColumn, firstCColumn, firstDColumn, firstEColumn, firstFColumn, firstGColumn);
+    }
+
+    private static class JDapperCache<T> {
+        private final Constructor<T> constructor;
+        private final Map<String, Method> methodMap = new HashMap<>();
+        private final Map<String, Field> fieldMap = new HashMap<>();
+
+        public JDapperCache(Class<T> tClass) {
+            try {
+                this.constructor = tClass.getConstructor();
+
+                for (Method m : tClass.getDeclaredMethods()) {
+                    JDapperColumnName columnName = m.getAnnotation(JDapperColumnName.class);
+                    if (columnName == null)
+                        continue;
+
+                    methodMap.put(columnName.value().toLowerCase(), m);
+                }
+
+                for (Field f : tClass.getDeclaredFields()) {
+                    JDapperColumnName columnName = f.getAnnotation(JDapperColumnName.class);
+                    if (columnName != null)
+                        fieldMap.put(columnName.value().toLowerCase(), f);
+                    else
+                        fieldMap.put(f.getName().toLowerCase(), f);
+                }
+            }
+            catch (NoSuchMethodException e) {
+                throw new JDapperException(e);
+            }
+        }
     }
 }
