@@ -82,8 +82,13 @@ public abstract class JDapper<T> implements RowMapper<T> {
             U u = objClass.getConstructor().newInstance();
             Map<String, Field> uFields = new HashMap<>();
 
-            for (Field f : objClass.getDeclaredFields())
-                uFields.put(f.getName().toLowerCase(), f);
+            for (Field f : objClass.getDeclaredFields()) {
+                JDapperColumnName columnName = f.getAnnotation(JDapperColumnName.class);
+                if (columnName != null)
+                    uFields.put(columnName.value().toLowerCase(), f);
+                else
+                    uFields.put(f.getName().toLowerCase(), f);
+            }
 
             for (int i = columnIndexStart; i <= columnIndexEnd; i++) {
                 String columnName = rs.getMetaData().getColumnLabel(i).toLowerCase();
@@ -91,8 +96,8 @@ public abstract class JDapper<T> implements RowMapper<T> {
 
                 if (correspondingField == null)
                     continue;
-                correspondingField.setAccessible(true);
 
+                correspondingField.setAccessible(true);
                 correspondingField.set(u, readValue(correspondingField, rs, i));
             }
 
