@@ -2,20 +2,23 @@ package net.redheademile.jdapper;
 
 import org.springframework.jdbc.core.RowMapper;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class JDapper<T> implements RowMapper<T> {
-    private static <U> U readValue(Field f, ResultSet rs, int columnIndex) throws SQLException {
+    private static <U> U readValue(Type type, Function<Class<? extends Annotation>, Annotation> getAnnotation, ResultSet rs, int columnIndex) throws SQLException {
         Object readObject = null;
 
-        Class<?> type = f.getType();
         if (type == String.class)
             readObject = rs.getString(columnIndex);
 
@@ -56,10 +59,10 @@ public abstract class JDapper<T> implements RowMapper<T> {
             readObject = rs.getTimestamp(columnIndex);
 
         else if (type == java.io.InputStream.class) {
-            if (f.getAnnotation(JDapperAsciiStream.class) != null)
+            if (getAnnotation.apply(JDapperAsciiStream.class) != null)
                 readObject = rs.getAsciiStream(columnIndex);
 
-            else if (f.getAnnotation(JDapperBinaryStream.class) != null)
+            else if (getAnnotation.apply(JDapperBinaryStream.class) != null)
                 readObject = rs.getBinaryStream(columnIndex);
 
             else
@@ -80,7 +83,16 @@ public abstract class JDapper<T> implements RowMapper<T> {
     protected <U> U createFilledObject(Class<U> objClass, ResultSet rs, int columnIndexStart, int columnIndexEnd) {
         try {
             U u = objClass.getConstructor().newInstance();
+            Map<String, Method> uMethod = new HashMap<>();
             Map<String, Field> uFields = new HashMap<>();
+
+            for (Method m : objClass.getDeclaredMethods()) {
+                JDapperColumnName columnName = m.getAnnotation(JDapperColumnName.class);
+                if (columnName == null)
+                    continue;
+
+                uMethod.put(columnName.value().toLowerCase(), m);
+            }
 
             for (Field f : objClass.getDeclaredFields()) {
                 JDapperColumnName columnName = f.getAnnotation(JDapperColumnName.class);
@@ -92,13 +104,20 @@ public abstract class JDapper<T> implements RowMapper<T> {
 
             for (int i = columnIndexStart; i <= columnIndexEnd; i++) {
                 String columnName = rs.getMetaData().getColumnLabel(i).toLowerCase();
-                Field correspondingField = uFields.get(columnName);
 
+                Method correspondingMethod = uMethod.get(columnName);
+                if (correspondingMethod != null) {
+                    correspondingMethod.setAccessible(true);
+                    correspondingMethod.invoke(u, readValue(correspondingMethod.getParameters()[0].getType(), correspondingMethod::getAnnotation, rs, i));
+                    continue;
+                }
+
+                Field correspondingField = uFields.get(columnName);
                 if (correspondingField == null)
                     continue;
 
                 correspondingField.setAccessible(true);
-                correspondingField.set(u, readValue(correspondingField, rs, i));
+                correspondingField.set(u, readValue(correspondingField.getType(), correspondingField::getAnnotation, rs, i));
             }
 
             return u;
