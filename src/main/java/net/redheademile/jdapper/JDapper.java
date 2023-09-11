@@ -108,7 +108,7 @@ public abstract class JDapper<T> implements RowMapper<T> {
                 Method correspondingMethod = uMethod.get(columnName);
                 if (correspondingMethod != null) {
                     correspondingMethod.setAccessible(true);
-                    correspondingMethod.invoke(u, readValue(correspondingMethod.getParameters()[0].getType(), correspondingMethod::getAnnotation, rs, i));
+                    correspondingMethod.invoke(u, new Object[] { readValue(correspondingMethod.getParameters()[0].getType(), correspondingMethod::getAnnotation, rs, i) });
                     continue;
                 }
 

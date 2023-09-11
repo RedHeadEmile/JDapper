@@ -47,6 +47,11 @@ public class JDapperExample {
         private String username;
         private Short preferedColor;
 
+        @JDapperColumnName("preferedColor")
+        public void setPreferedColor(Short preferedColor) {
+            this.preferedColor = preferedColor;
+        }
+
         private List<PlayerMessage> messages = new ArrayList<>();
 
         @Override
