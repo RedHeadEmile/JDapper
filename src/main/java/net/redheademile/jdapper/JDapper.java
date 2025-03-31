@@ -1,7 +1,5 @@
 package net.redheademile.jdapper;
 
-import org.springframework.jdbc.core.RowMapper;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -118,6 +116,10 @@ public abstract class JDapper<T> implements RowMapper<T> {
         }
     }
 
+    public static <A> RowMapper<A> getMapper(Class<A> aClass) {
+        return new JDapperSimple<A>(aClass);
+    }
+
     protected int[] findColumnIndexes(ResultSetMetaData rsMetaData, String... columnNames) throws SQLException {
         int[] indexes = new int[columnNames.length];
         int lastFoundColumnNameIndex = 0;
@@ -134,10 +136,6 @@ public abstract class JDapper<T> implements RowMapper<T> {
             throw new JDapperException();
 
         return indexes;
-    }
-
-    public static <A> RowMapper<A> getMapper(Class<A> aClass) {
-        return new JDapperSimple<A>(aClass);
     }
 
     public static <A, B, Z> RowMapper<Z> getMapper(

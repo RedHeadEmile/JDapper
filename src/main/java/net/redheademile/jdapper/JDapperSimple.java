@@ -11,7 +11,7 @@ public class JDapperSimple<T> extends JDapper<T> {
     }
 
     @Override
-    public T mapRow(ResultSet rs, int rowNum) throws SQLException {
+    public T mapRow(ResultSet rs) throws SQLException {
         return super.createFilledObject(tClass, rs, 1, rs.getMetaData().getColumnCount());
     }
 }

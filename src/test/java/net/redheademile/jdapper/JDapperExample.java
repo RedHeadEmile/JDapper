@@ -1,8 +1,8 @@
 package net.redheademile.jdapper;
 
-import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
+/*import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.RowMapper;*/
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class JDapperExample {
     public static void main(String[] args) {
-        MysqlDataSource dataSource = new MysqlDataSource();
+/*        MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setDatabaseName("jdappertest");
         dataSource.setUser("root");
         dataSource.setPassword("");
@@ -40,7 +40,7 @@ public class JDapperExample {
         jdbcTemplate.query("SELECT player.*, playermessage.* FROM player LEFT JOIN playermessage ON player.uuid = playermessage.Player_PlayerId", playerMapper);
         System.out.println("Query + Mapping took " + (System.currentTimeMillis() - start) + "ms");
 
-        System.out.println(players);
+        System.out.println(players);*/
     }
 
     public static class Player {

@@ -20,7 +20,7 @@ public class JDapperDouble<A, B, Z> extends JDapper<Z> {
     }
 
     @Override
-    public Z mapRow(ResultSet rs, int rowNum) throws SQLException {
+    public Z mapRow(ResultSet rs) throws SQLException {
         int[] indexes = super.findColumnIndexes(rs.getMetaData(), this.firstAColumn, this.firstBColumn);
 
         A a = super.createFilledObject(aClass, rs, indexes[0], indexes[1] - 1);
